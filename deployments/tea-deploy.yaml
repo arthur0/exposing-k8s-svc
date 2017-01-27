@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tea-deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tea
+  template:
+    metadata:
+      labels:
+        app: tea
+    spec:
+      containers:
+      - name: tea
+        image: nginxdemos/hello
+        imagePullPolicy: Always
+        env:
+        - name: VERSION
+          value: "v1" 
+        ports:
+        - containerPort: 80

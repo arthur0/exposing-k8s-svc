@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: coffee-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: coffee
+  template:
+    metadata:
+      labels:
+        app: coffee
+    spec:
+      containers:
+      - name: tea
+        image: nginxdemos/hello
+        imagePullPolicy: Always
+        env:
+        - name: VERSION
+          value: "v1" 
+        ports:
+        - containerPort: 80
