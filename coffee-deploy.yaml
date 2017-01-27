@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: coffee-deploy
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: coffee
@@ -13,7 +13,7 @@ spec:
         app: coffee
     spec:
       containers:
-      - name: tea
+      - name: coffee
         image: nginxdemos/hello
         imagePullPolicy: Always
         env:
