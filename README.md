@@ -1,6 +1,6 @@
-# **HAProxyLoad Balance options for Kubernetes**
+# **Exposing services in Kubernetes cluster**
 
-## Exposing Services using **NodePort** + external HAProxy Load Balancer
+## Part 1: Exposing services using **NodePort** + external HAProxy Load Balancer
 
 ### Configuration:
 
@@ -117,9 +117,9 @@ service "coffee-svc" deleted
 service "tea-svc" deleted
 ```
 _________
-## Using HAProxy  [**Ingress**](https://kubernetes.io/docs/user-guide/ingress/) Controller
+## Part 2: Deploying HAProxy  [**Ingress**](https://kubernetes.io/docs/user-guide/ingress/) Controller
 
-## Configuration:
+### Configuration:
 
 |   Hostname       | hypothetical IP |   Virtual Machine OS   | RAM | VCPUs |
 |:-----------------|:---------------:|:-----------------------|:---:|:-----:|
@@ -131,6 +131,7 @@ _________
 * Kubernetes was installed with [kubeadm](https://kubernetes.io/docs/getting-started-guides/kubeadm/) 
 * Flannel Pod network (step 2 of installation)  with `--pod-network-cidr 10.244.0.0/16` option
 * All of the following commands were executed from the master node
+* Kubernetes 1.2 and later (TLS support for Ingress has been added in 1.2)
 
 ### Deploy a **default backend** used to serve 404 Not Found pages:
 
@@ -147,7 +148,7 @@ deployment "http-default-backend" created
 
 ### Create a TLS [secret](https://kubernetes.io/docs/user-guide/secrets/#overview-of-secrets) named **tls-secret** to be used as default TLS certificate
 
-1. Generate keys
+1 Generate keys
 
 ```
 $ openssl req \
@@ -160,13 +161,13 @@ writing new private key to 'tls.key'
 -----
 ```
 
-2. Create secret
+2 Create secret
 ```
 $ kubectl create secret tls tls-secret --cert=tls.crt --key=tls.key
 secret "tls-secret" created
 ```
 
-3. Remove files
+3 Remove files
 ```
 $ rm -v tls.crt tls.key
 removed 'tls.crt'
@@ -181,20 +182,20 @@ $ cat ingress/haproxy-ingress-controller.yaml | grep -i -E 'backend|ssl'
     - --default-ssl-certificate=default/tls-secret
 ```
 
-1. Create a haproxy ingress controller deployment
+1 Create a haproxy ingress controller deployment
 ```
 $ kubectl create -f ingress/haproxy-ingress-controller.yaml
 deployment "haproxy-ingress-controller" created
 ```
 
-2. Expose our ingress controller as NodePort type
+2 Expose our ingress controller as NodePort type
 
 ```
 $ kubectl expose deploy haproxy-ingress-controller --type=NodePort
 service "haproxy-ingress-controller" exposed
 ```
 
-3.  We can view the ports 31717, 31497 and 32283 allocated to http (80), https(443) and statistics page(1936) services, respectively. Workers nodes need these ports open.
+3  We can view the ports 31717, 31497 and 32283 allocated to http (80), https(443) and statistics page(1936) services, respectively. Workers nodes need these ports open.
 
 ```
 kubectl get svc
@@ -204,14 +205,14 @@ http-default-backend         10.104.41.44    <none>        8080/TCP             
 kubernetes                   10.96.0.1       <none>        443/TCP                                     6d
 ```
 
-4. Get the pod  `kubectl get pod | grep -i ingress` and the node `kubectl describe pod <pod name> | grep -i node` that running Ingress Controller. in my case, **k8s-big-worker/4.3.2.1**
+4 Get the pod  `kubectl get pod | grep -i ingress` and the node `kubectl describe pod <pod name> | grep -i node` that running Ingress Controller. in my case, **k8s-big-worker/4.3.2.1**
 
 ```
 $ kubectl describe pod haproxy-ingress-controller-3154584451-n3ww3 | grep -i node
 Node:		  k8s-big-worker/4.3.2.1
 ```
 
-We can access the services externally from <IP>:<Port> of service e.g.:
+We can access the services externally from `<IP>:<Port>` of service e.g.:
 
 | IP       | Service            | Port     | 
 |----------|--------------------|----------|
@@ -222,14 +223,14 @@ We can access the services externally from <IP>:<Port> of service e.g.:
 
 ### Create the Coffee and Tea services.
 
-1. Create the deployments
+1 Create the deployments
 ```
 $ kubectl create -f deployments/
 deployment "coffee-deploy" created
 deployment "tea-deploy" created
 ```
 
-2. Expose deployments (create **coffee-svc** and **tea-svc** services)
+2 Expose deployments (create **coffee-svc** and **tea-svc** services)
 ```
 $ kubectl expose deploy coffee-deploy --name=coffee-svc --port=80
 service "coffee-svc" exposed
@@ -245,7 +246,6 @@ $ kubectl create -f ingress/drinks-ingress.yaml
 ingress "drinks-ingress" created
 ```
 
-
 Host          | Path       | Service   | 
 |-------------|------------|-----------|
 |drinks.com.br |   /       | coffee-svc|
@@ -254,12 +254,13 @@ Host          | Path       | Service   |
 |drinks.com.in |  /coffee  | coffee-svc|
 | -            |  -        | 404       |
 
+
 We can test these rules with command `curl <ip>:<port> <options>`:
 ```
 $ curl 4.3.2.1:31717
 default backend - 404
 ```
-Replace you <ip>:<port> and check the results:
+Replace you `<ip>:<port>` and check the results:
 * `$ curl 4.3.2.1:31717 -H 'Host: drinks.com.in' | grep -i -E 'coffee|tea'`
 * `$ curl 4.3.2.1:31717 -H 'Host: drinks.com.br' | grep -i -E 'coffee|tea'`
 * `$ curl 4.3.2.1:31717/tea -H 'Host: drinks.com.in' | grep -i -E 'coffee|tea'`
@@ -268,8 +269,8 @@ Replace you <ip>:<port> and check the results:
 ### Perform requests and view Load Balance
  We can perform requests using  [Apache Bench](https://httpd.apache.org/docs/2.4/programs/ab.html). `$ apt install apache2-utils` 
 ```
-$ ab -c 600 -t 30 -H "Host: drinks.com.in" 10.11.4.62:31717/ &/
-ab -c 600 -t 30 -H "Host: drinks.com.br" 10.11.4.62:31717/
+$ ab -c 600 -t 30 -H "Host: drinks.com.in" 4.3.2.1:31717/ &/
+ab -c 600 -t 30 -H "Host: drinks.com.br" 4.3.2.1:31717/
 ```
 
 In the HAProxy statistics page we can view the load balancing (press F5 to update the page), like this: 
@@ -277,5 +278,3 @@ In the HAProxy statistics page we can view the load balancing (press F5 to updat
 
 
 Any question or suggestion: artmr@lsd.ufcg.edu.br
-
-
