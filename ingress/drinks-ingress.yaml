@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: drinks-ingress
+spec:
+  rules:
+  - host: drinks.com.br
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: coffee-svc
+          servicePort: 80
+      - path: /tea
+        backend:
+          serviceName: tea-svc
+          servicePort: 80
+  - host: drinks.com.in
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: tea-svc
+          servicePort: 80
+      - path: /coffee
+        backend:
+          serviceName: coffee-svc
+          servicePort: 80
