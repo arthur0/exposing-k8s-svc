@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: coffee-deploy
 spec:
-  replicas: 3
+  replicas: 9
   selector:
     matchLabels:
       app: coffee
